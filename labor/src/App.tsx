@@ -1,26 +1,28 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
+import FileHelper from './Utils/FileHelper';
 
-function App() {
+const App: React.FC<{}> = () => {
+  const onChangeFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.currentTarget.files)
+      FileHelper.parseFile(event.currentTarget.files[0])
+        .then((value) => {
+          console.log(value);
+        })
+        .catch((error) => {
+          handleFileError();
+        });
+  };
+
+  const handleFileError = () => {
+    alert('Dile in incorrect format');
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <form>
+      <input type={'file'} onChange={onChangeFile} />
+    </form>
   );
-}
+};
 
 export default App;
