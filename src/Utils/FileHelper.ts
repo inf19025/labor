@@ -1,4 +1,4 @@
-import NetworkNode from '../Models/NetworkNode';
+import NetworkNode, { ReadNode } from '../Models/NetworkNode';
 
 export default class FileHelper {
   /**
@@ -7,15 +7,15 @@ export default class FileHelper {
    * @returns the parsed content | rejects promise if not right format
    */
   public static async parseFile(file: File): Promise<NetworkNode[]> {
-    let content: NetworkNode[] = [];
+    let content: ReadNode[] = [];
     let valid: boolean = true;
 
     content = JSON.parse(await file.text());
 
     content.forEach((value) => {
       if (
-        value.id === undefined ||
-        value.name === undefined ||
+        value.node.id === undefined ||
+        value.node.name === undefined ||
         value.routes === undefined
       ) {
         valid = false;
@@ -23,7 +23,10 @@ export default class FileHelper {
     });
 
     if (valid) {
-      return Promise.resolve(content);
+      const ret = content.map((value) => {
+        return new NetworkNode(value.node, value.routes);
+      });
+      return Promise.resolve(ret);
     }
     return Promise.reject();
   }
