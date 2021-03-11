@@ -1,6 +1,11 @@
-import NetworkNode, { ReadNode } from '../Models/NetworkNode';
+import { ReadNode } from '../Simulation/Models/Node';
+import { Route } from '../Simulation/Models/Route';
+import NetworkNode from '../Simulation/NetworkNode';
 
 export default class FileHelper {
+  private static nodes: NetworkNode[] = [];
+  private static routes: Route[] = [];
+
   /**
    *
    * @param file the file to be parsed
@@ -26,10 +31,20 @@ export default class FileHelper {
       const ret = content.map((value) => {
         return new NetworkNode(value.node, value.routes);
       });
+      FileHelper.nodes = ret;
+
       return Promise.resolve(ret);
     }
     return Promise.reject();
   }
 
-  public static simulateNetwork(nodes: NetworkNode[]) {}
+  public static simulateNetwork() {}
+
+  public static getNodes() {
+    return FileHelper.nodes;
+  }
+
+  public static getRoutes() {
+    return FileHelper.routes;
+  }
 }

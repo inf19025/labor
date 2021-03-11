@@ -19,9 +19,11 @@ const App: React.FC<{}> = () => {
   };
 
   return (
-    <form>
-      <input type={'file'} onChange={onChangeFile} />
-    </form>
+    <div style={{ textAlign: 'center', alignContent: 'center' }}>
+      <form>
+        <input type={'file'} onChange={onChangeFile} />
+      </form>
+    </div>
   );
 };
 
