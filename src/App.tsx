@@ -15,7 +15,7 @@ const App: React.FC<{}> = () => {
   };
 
   const handleFileError = () => {
-    alert('Dile in incorrect format');
+    alert('File in incorrect format');
   };
 
   return (

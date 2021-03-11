@@ -27,4 +27,6 @@ export default class FileHelper {
     }
     return Promise.reject();
   }
+
+  public static simulateNetwork(nodes: NetworkNode[]) {}
 }
