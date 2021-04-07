@@ -10,7 +10,6 @@ const App: React.FC<{}> = () => {
           console.log(value);
         })
         .catch((error) => {
-          handleFileError();
         });
   };
 
