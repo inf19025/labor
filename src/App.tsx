@@ -18,12 +18,38 @@ const App: React.FC<{}> = () => {
 		alert('File in incorrect format');
 	};
 
+	const downloadFile = () => {
+		const result = FileHelper.generateResult();
+		if (result === undefined) {
+			alert('Noch nicht simuliert');
+			return;
+		}
+
+		const blob = new Blob([JSON.stringify(result)]);
+
+		const href = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = href;
+		link.download = 'result.json';
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+	};
+
+	const simulate = () => {
+		const donefn = () => {
+			alert('Simulation abgeschlossen');
+		};
+		FileHelper.simulateNetwork(donefn);
+	};
+
 	return (
 		<div style={{ textAlign: 'center', alignContent: 'center' }}>
 			<form>
 				<input type={'file'} onChange={onChangeFile} />
 			</form>
-			<button onClick={FileHelper.simulateNetwork}>Simulieren</button>
+			<button onClick={simulate}>Simulieren</button>
+			<button onClick={downloadFile}>Ergebnis herunterladen</button>
 		</div>
 	);
 };

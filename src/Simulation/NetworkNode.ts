@@ -29,10 +29,17 @@ export default class NetworkNode {
 	 * @param nodes list of all known nodes
 	 */
 	scanRoutes() {
-		network.broadcast(
-			this.rootNode ?? { root: this.node, cost: 0 },
-			this.collectRoute
-		);
+		if (this.rootNode) {
+			// to deep clone the object, not reference it
+			let sendNode: Payload = JSON.parse(JSON.stringify(this.rootNode));
+			sendNode.node = this.node;
+
+			console.log(`sending ${JSON.stringify(sendNode)}`);
+
+			network.broadcast(sendNode, this.collectRoute);
+		} else {
+			network.broadcast({ root: this.node, cost: 0 }, this.collectRoute);
+		}
 	}
 
 	/**
@@ -48,19 +55,44 @@ export default class NetworkNode {
 		) {
 			return;
 		}
+		const routes = this.findRoute(payload);
+		if (routes === undefined || routes.new === undefined) return;
+
 		if (this.rootNode) {
 			if (
 				payload.root.id < this.rootNode.root.id ||
-				payload.cost < this.rootNode.cost
+				(payload.cost + routes.new.cost < this.rootNode.cost &&
+					payload.root.id === this.rootNode.root.id)
 			) {
-				this.setRootNode(payload);
-				this.scanRoutes();
+				if (!routes.direct) {
+					console.log('payload: ', payload);
+					this.rootNode = payload;
+					console.log(
+						`von ${this.node.name} nach ${payload.root.name} über ${payload.node?.name}`
+					);
+					console.log(
+						`bei ${this.node.name} ${this.rootNode.node?.name} ${this.rootNode.cost} + ${routes.new.cost}`
+					);
+					this.rootNode.cost += routes.new.cost;
+				} else if (routes.direct.cost < payload.cost + routes.new.cost) {
+					this.rootNode = {
+						root: payload.root,
+						cost: routes.direct.cost,
+					};
+				}
 			} else {
 				ret({ node: this.rootNode.root, costs: this.rootNode.cost });
 			}
 		} else {
 			if (payload.root.id < this.node.id) {
-				this.setRootNode(payload);
+				this.rootNode = payload;
+				console.log(
+					`von ${this.node.name} nach ${payload.root.name} über ${payload.node?.name}`
+				);
+				console.log(
+					`bei ${this.node.name} ${this.rootNode.node} ${this.rootNode.cost} + ${routes.new.cost}`
+				);
+				this.rootNode.cost += routes.new.cost;
 				this.scanRoutes();
 			}
 		}
@@ -79,46 +111,29 @@ export default class NetworkNode {
 
 	private collectRoute = (res: ResponsePayload) => {};
 
-	private setRootNode = (newNode: Payload) => {
-		if (this.rootNode === undefined) {
-			this.rootNode = newNode;
-			this.rootNode.node = this.node;
-			return;
-		}
-
-		const routes = this.findRoute(newNode);
-
-		if (routes === undefined) return;
-		if (
-			newNode.cost + routes.new.cost <
-			this.rootNode.cost + routes.current.cost
-		) {
-			this.rootNode = newNode;
-			this.rootNode.node = this.node;
-		}
-	};
-
 	private findRoute(
-		node: Payload
-	): { current: MyRoute; new: MyRoute } | undefined {
-		const routeToNew = this.myRoutes.find((value) => {
-			return value.target === (node.node?.name ?? node.root.name);
+		payload: Payload
+	): { direct: MyRoute; new: MyRoute } | undefined {
+		const routeToNew = this.myRoutes
+			.filter((value) => {
+				if (payload.node) {
+					return value.target === payload.node.name;
+				} else {
+					return value.target === payload.root.name;
+				}
+			})
+			.sort((a, b) => {
+				return a.cost - b.cost;
+			})[0];
+
+		const direct = this.myRoutes.filter((value) => {
+			return value.target === payload.root.name;
 		});
-
-		if (this.rootNode === undefined && routeToNew) {
-			return { current: { target: this.node.name, cost: 0 }, new: routeToNew };
+		if (direct) {
+			direct.sort((a, b) => {
+				return a.cost - b.cost;
+			});
 		}
-
-		const routeToCurrent = this.myRoutes.find((value) => {
-			if (this.rootNode) {
-				return (
-					value.target === (this.rootNode.node?.name ?? this.rootNode.root.name)
-				);
-			}
-		});
-
-		if (routeToCurrent && routeToNew) {
-			return { current: routeToCurrent, new: routeToNew };
-		}
+		return { direct: direct[0], new: routeToNew };
 	}
 }

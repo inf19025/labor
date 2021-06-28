@@ -19,10 +19,13 @@ export default class FileHelper {
 			} else {
 				if (node.getRootNode()) {
 					if (currRoot.name !== node.getRootNode()?.root.name) {
+						console.log('currRoot: ', currRoot.name);
+						console.log('tested root: ', node.getRootNode()?.root.name);
 						return false;
 					}
 				} else {
 					if (currRoot.name !== node.getNode().name) {
+						console.log('root: ', currRoot.name);
 						return false;
 					}
 				}
@@ -31,8 +34,58 @@ export default class FileHelper {
 		return true;
 	}
 
-	private static generateResult() {
-		this.nodes.forEach(() => {});
+	public static generateResult():
+		| {
+				root: string;
+				waysToRoot: {
+					startingNode: string;
+					path: { node: string; cost: number }[];
+				}[];
+		  }
+		| undefined {
+		let root = this.nodes[0]?.getRootNode()?.root.name;
+		if (root) {
+			let ret: {
+				root: string;
+				waysToRoot: {
+					startingNode: string;
+					path: { node: string; cost: number }[];
+				}[];
+			} = { root: root, waysToRoot: [] };
+			this.nodes.forEach((node) => {
+				let rootNode = node.getRootNode();
+				if (rootNode) {
+					ret.waysToRoot.push({
+						startingNode: node.getNode().name,
+						path: [
+							{
+								node: rootNode.node ? rootNode.node.name : rootNode.root.name,
+								cost: rootNode.cost,
+							},
+						],
+					});
+
+					ret.waysToRoot.forEach((value1) => {
+						if (value1.path.length > 0) {
+							let latestNode = value1.path[value1.path.length - 1].node;
+							if (latestNode === node.getNode().name) {
+								if (rootNode) {
+									value1.path.push({
+										node: rootNode.node
+											? rootNode.node.name
+											: rootNode.root.name,
+										cost: rootNode.cost,
+									});
+								}
+							}
+						}
+					});
+				}
+			});
+			return ret;
+		} else {
+			return undefined;
+		}
 	}
 
 	/**
@@ -80,16 +133,21 @@ export default class FileHelper {
 		return Promise.reject();
 	}
 
-	public static simulateNetwork() {
+	public static simulateNetwork(donefn: () => void) {
 		let done = FileHelper.determineDone();
+		let counter = 0;
 		while (!done) {
+			counter++;
 			console.log(done);
 			FileHelper.nodes.forEach((node) => {
 				node.scanRoutes();
 			});
 			done = FileHelper.determineDone();
+			if (counter > 100) {
+				done = true;
+			}
 		}
-		console.log(FileHelper.nodes);
+		donefn();
 	}
 
 	public static getNodes() {

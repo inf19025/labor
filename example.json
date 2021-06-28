@@ -7,6 +7,14 @@
 		{
 			"name": "B",
 			"id": 5
+		},
+		{
+			"name": "C",
+			"id": 11
+		},
+		{
+			"name": "D",
+			"id": 1
 		}
 	],
 	"routes": [
@@ -16,9 +24,29 @@
 			"name2": "B"
 		},
 		{
-			"cost": 0,
+			"cost": 4,
 			"name1": "A",
 			"name2": "B"
+		},
+		{
+			"cost": 3,
+			"name1": "A",
+			"name2": "C"
+		},
+		{
+			"cost": 0,
+			"name1": "B",
+			"name2": "C"
+		},
+		{
+			"cost": 10,
+			"name1": "D",
+			"name2": "C"
+		},
+		{
+			"cost": 7,
+			"name1": "B",
+			"name2": "D"
 		}
 	]
 }
