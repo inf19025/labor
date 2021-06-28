@@ -1,0 +1,24 @@
+{
+	"nodes": [
+		{
+			"name": "A",
+			"id": 10
+		},
+		{
+			"name": "B",
+			"id": 5
+		}
+	],
+	"routes": [
+		{
+			"cost": 5,
+			"name1": "A",
+			"name2": "B"
+		},
+		{
+			"cost": 0,
+			"name1": "A",
+			"name2": "B"
+		}
+	]
+}

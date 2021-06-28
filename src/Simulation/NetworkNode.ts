@@ -1,117 +1,124 @@
-import FileHelper from '../Utils/FileHelper';
 import { Node } from './Models/Node';
 import { MyRoute, Route } from './Models/Route';
 import { Payload, ResponsePayload } from './Models/Payload';
 import { network } from './Network';
+
 export default class NetworkNode {
-  private node: Node;
-  private myRoutes: MyRoute[] = [];
-  private rootNode?: Payload;
+	private node: Node;
+	private myRoutes: MyRoute[] = [];
+	private rootNode?: Payload;
 
-  constructor(node: Node, routes: Route[]) {
-    this.node = node;
-    this.scanRoutes = this.scanRoutes.bind(this);
-    this.handleBroadcast = this.handleBroadcast.bind(this);
-    network.on('broadcast', this.handleBroadcast);
-    this.loadRoutes(routes);
-  }
+	constructor(node: Node, routes: Route[]) {
+		this.node = node;
+		this.scanRoutes = this.scanRoutes.bind(this);
+		this.handleBroadcast = this.handleBroadcast.bind(this);
+		network.on('broadcast', this.handleBroadcast);
+		this.loadRoutes(routes);
+	}
 
-  getNode = (): Node => {
-    return this.node;
-  };
+	getRootNode = (): Payload | undefined => {
+		return this.rootNode;
+	};
 
-  /**
-   * Sends a discovery payload to all known routes
-   * @param nodes list of all known nodes
-   */
-  scanRoutes() {
-    network.broadcast(
-      this.rootNode ?? { root: this.node, cost: 0 },
-      this.collectRoute
-    );
-  }
+	getNode = (): Node => {
+		return this.node;
+	};
 
-  /**
-   * this method is called when a payload is sent to them
-   * @param payload
-   * @param ret
-   */
-  handleBroadcast(payload: Payload, ret: (res: ResponsePayload) => void) {
-    if (
-      payload.node?.id === this.node.id &&
-      payload.node.name === this.node.name
-    ) {
-      return;
-    }
-    if (this.rootNode) {
-      if (
-        payload.root.id < this.rootNode.root.id &&
-        payload.cost < this.rootNode.cost
-      ) {
-        this.setRootNode(payload);
-        this.scanRoutes();
-      } else {
-        ret({ node: this.rootNode.root, costs: this.rootNode.cost });
-      }
-    } else {
-      if (payload.root.id < this.node.id) {
-        this.setRootNode(payload);
-        this.scanRoutes();
-      }
-    }
-  }
+	/**
+	 * Sends a discovery payload to all known routes
+	 * @param nodes list of all known nodes
+	 */
+	scanRoutes() {
+		network.broadcast(
+			this.rootNode ?? { root: this.node, cost: 0 },
+			this.collectRoute
+		);
+	}
 
-  private loadRoutes(routes: Route[]) {
-    routes.forEach((value) => {
-      if (value.name1 === this.node.name) {
-        this.myRoutes.push({ target: value.name2, cost: value.cost });
-      }
-      if (value.name2 === this.node.name) {
-        this.myRoutes.push({ target: value.name1, cost: value.cost });
-      }
-    });
-  }
+	/**
+	 * this method is called when a payload is sent to them
+	 * @param payload
+	 * @param ret
+	 */
+	handleBroadcast(payload: Payload, ret: (res: ResponsePayload) => void) {
+		if (
+			(payload.node?.id === this.node.id &&
+				payload.node.name === this.node.name) ||
+			(payload.root.id === this.node.id && payload.root.name === this.node.name)
+		) {
+			return;
+		}
+		if (this.rootNode) {
+			if (
+				payload.root.id < this.rootNode.root.id ||
+				payload.cost < this.rootNode.cost
+			) {
+				this.setRootNode(payload);
+				this.scanRoutes();
+			} else {
+				ret({ node: this.rootNode.root, costs: this.rootNode.cost });
+			}
+		} else {
+			if (payload.root.id < this.node.id) {
+				this.setRootNode(payload);
+				this.scanRoutes();
+			}
+		}
+	}
 
-  private collectRoute = (res: ResponsePayload) => {};
+	private loadRoutes(routes: Route[]) {
+		routes.forEach((value) => {
+			if (value.name1 === this.node.name) {
+				this.myRoutes.push({ target: value.name2, cost: value.cost });
+			}
+			if (value.name2 === this.node.name) {
+				this.myRoutes.push({ target: value.name1, cost: value.cost });
+			}
+		});
+	}
 
-  private setRootNode = (newNode: Payload) => {
-    if (this.rootNode === undefined) {
-      this.rootNode = newNode;
-      return;
-    }
+	private collectRoute = (res: ResponsePayload) => {};
 
-    const routes = this.findRoute(newNode);
+	private setRootNode = (newNode: Payload) => {
+		if (this.rootNode === undefined) {
+			this.rootNode = newNode;
+			this.rootNode.node = this.node;
+			return;
+		}
 
-    if (routes === undefined) return;
-    if (
-      newNode.cost + routes.new.cost <
-      this.rootNode.cost + routes.current.cost
-    ) {
-      this.rootNode = newNode;
-    }
-  };
+		const routes = this.findRoute(newNode);
 
-  private findRoute(
-    node: Payload
-  ): { current: MyRoute; new: MyRoute } | undefined {
-    const routeToNew = this.myRoutes.find((value) => {
-      return value.target === (node.node?.name ?? node.root.name);
-    });
+		if (routes === undefined) return;
+		if (
+			newNode.cost + routes.new.cost <
+			this.rootNode.cost + routes.current.cost
+		) {
+			this.rootNode = newNode;
+			this.rootNode.node = this.node;
+		}
+	};
 
-    if (this.rootNode === undefined && routeToNew) {
-      return { current: { target: this.node.name, cost: 0 }, new: routeToNew };
-    }
+	private findRoute(
+		node: Payload
+	): { current: MyRoute; new: MyRoute } | undefined {
+		const routeToNew = this.myRoutes.find((value) => {
+			return value.target === (node.node?.name ?? node.root.name);
+		});
 
-    const routeToCurrent = this.myRoutes.find((value) => {
-      if (this.rootNode) {
-        return (
-          value.target === (this.rootNode.node?.name ?? this.rootNode.root.name)
-        );
-      }
-    });
+		if (this.rootNode === undefined && routeToNew) {
+			return { current: { target: this.node.name, cost: 0 }, new: routeToNew };
+		}
 
-    if (routeToCurrent && routeToNew) {
-      return { current: routeToCurrent, new: routeToNew };
-    }
-  }
+		const routeToCurrent = this.myRoutes.find((value) => {
+			if (this.rootNode) {
+				return (
+					value.target === (this.rootNode.node?.name ?? this.rootNode.root.name)
+				);
+			}
+		});
+
+		if (routeToCurrent && routeToNew) {
+			return { current: routeToCurrent, new: routeToNew };
+		}
+	}
 }
